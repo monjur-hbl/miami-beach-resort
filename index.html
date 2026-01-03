@@ -127,6 +127,9 @@
     </div>
 
     <script>
+        const BEDS24_TOKEN = 'PsJikzvTCNtknwTQt4eFFueJKMA/71vezOPM0kSmxl7ZgGwUMEAwDF0RIryBdmSSWb41A7tM4DkVaYxFv2bAAaAvZzrpI9siKJvH9YV0WNf8PwbY+0tRfg6xF11UszG8e/23Hd5m80kJQxLNgCdMUFI/WN3lTLR6FVzk/3srSf4=';
+        const PROPERTY_ID = '279646';
+        
         const ROOMS = {
             583459: { name: 'Royal Sea View Couple Room', bn: 'রয়্যাল সি ভিউ কাপল রুম', type: 'Couple', emoji: '🌊👑', adults: 2, children: 1 },
             583466: { name: 'Premium Sea View Couple Room', bn: 'প্রিমিয়াম সি ভিউ কাপল রুম', type: 'Couple', emoji: '🌊⭐', adults: 2, children: 1 },
@@ -165,17 +168,33 @@
             btn.textContent = '⏳ Checking...';
             resultsDiv.innerHTML = '<div class="loading">Fetching real-time availability...</div>';
             
+            const apiUrl = `https://beds24.com/api/v2/inventory/rooms/availability?propertyId=${PROPERTY_ID}&startDate=${checkIn}&endDate=${checkOut}`;
+            
             try {
-                const response = await fetch(`/api/availability?startDate=${checkIn}&endDate=${checkOut}`);
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                    headers: { 'token': BEDS24_TOKEN }
+                });
                 const data = await response.json();
                 
                 if (data.success && data.data) {
                     displayResults(data.data, checkIn, checkOut);
                 } else {
-                    resultsDiv.innerHTML = `<div class="error">❌ ${data.error || 'Failed to fetch availability'}</div>`;
+                    throw new Error(data.error || 'API Error');
                 }
             } catch (error) {
-                resultsDiv.innerHTML = `<div class="error">❌ Connection error. Please try again.</div>`;
+                // Try via n8n proxy if direct call fails (CORS)
+                try {
+                    const proxyResponse = await fetch(`https://holidayzer.app.n8n.cloud/webhook/availability?startDate=${checkIn}&endDate=${checkOut}`);
+                    const proxyData = await proxyResponse.json();
+                    if (proxyData.success && proxyData.data) {
+                        displayResults(proxyData.data, checkIn, checkOut);
+                    } else {
+                        resultsDiv.innerHTML = `<div class="error">❌ ${proxyData.error || 'Failed to fetch availability'}</div>`;
+                    }
+                } catch (proxyError) {
+                    resultsDiv.innerHTML = `<div class="error">❌ Connection error. Please try again later.</div>`;
+                }
             }
             
             btn.disabled = false;
