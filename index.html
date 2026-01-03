@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Miami Beach Resort - Room Availability</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; padding: 40px 0; }
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #f39c12, #e74c3c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        header p { color: #94a3b8; font-size: 1.1rem; }
+        .date-picker {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+        .date-group { display: flex; flex-direction: column; gap: 8px; }
+        .date-group label { font-size: 0.9rem; color: #94a3b8; }
+        .date-group input {
+            padding: 12px 20px;
+            border: 2px solid #334155;
+            border-radius: 10px;
+            background: #1e293b;
+            color: #fff;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        .date-group input:focus { outline: none; border-color: #f39c12; }
+        .check-btn {
+            padding: 12px 40px;
+            background: linear-gradient(90deg, #f39c12, #e74c3c);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            align-self: flex-end;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .check-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(243, 156, 18, 0.3); }
+        .check-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .loading { text-align: center; padding: 40px; color: #94a3b8; }
+        .rooms-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        .room-card {
+            background: #1e293b;
+            border-radius: 15px;
+            padding: 25px;
+            border: 2px solid #334155;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .room-card:hover { transform: translateY(-5px); }
+        .room-card.available { border-color: #22c55e; }
+        .room-card.unavailable { border-color: #ef4444; opacity: 0.7; }
+        .room-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
+        .room-emoji { font-size: 2.5rem; }
+        .room-status { padding: 5px 15px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
+        .room-status.available { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+        .room-status.unavailable { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .room-name { font-size: 1.2rem; font-weight: 600; margin-bottom: 5px; }
+        .room-name-bn { font-size: 1rem; color: #94a3b8; margin-bottom: 10px; }
+        .room-type { display: inline-block; padding: 3px 10px; background: #334155; border-radius: 5px; font-size: 0.8rem; color: #94a3b8; }
+        .room-capacity { margin-top: 15px; padding-top: 15px; border-top: 1px solid #334155; display: flex; gap: 20px; color: #94a3b8; font-size: 0.9rem; }
+        .summary { background: #1e293b; border-radius: 15px; padding: 25px; margin-top: 30px; text-align: center; }
+        .summary h3 { color: #f39c12; margin-bottom: 10px; }
+        .summary-stats { display: flex; justify-content: center; gap: 40px; margin-top: 15px; }
+        .stat { text-align: center; }
+        .stat-number { font-size: 2rem; font-weight: bold; }
+        .stat-number.green { color: #22c55e; }
+        .stat-number.red { color: #ef4444; }
+        .stat-label { color: #94a3b8; font-size: 0.9rem; }
+        .error { background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 10px; padding: 20px; text-align: center; color: #ef4444; }
+        .cta { text-align: center; margin-top: 30px; padding: 30px; background: linear-gradient(90deg, rgba(243, 156, 18, 0.1), rgba(231, 76, 60, 0.1)); border-radius: 15px; }
+        .cta h3 { margin-bottom: 10px; }
+        .cta a { color: #22c55e; font-size: 1.5rem; text-decoration: none; font-weight: bold; }
+        footer { text-align: center; padding: 40px; color: #64748b; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏨 Miami Beach Resort</h1>
+            <p>Cox's Bazar, Bangladesh • Check Real-Time Room Availability</p>
+        </header>
+        
+        <div class="date-picker">
+            <div class="date-group">
+                <label>Check-in Date</label>
+                <input type="date" id="checkIn" />
+            </div>
+            <div class="date-group">
+                <label>Check-out Date</label>
+                <input type="date" id="checkOut" />
+            </div>
+            <button class="check-btn" id="checkBtn" onclick="checkAvailability()">
+                🔍 Check Availability
+            </button>
+        </div>
+        
+        <div id="results"></div>
+        
+        <footer>
+            📍 South Kolatali, Marine Drive Road, Cox's Bazar<br>
+            📞 +880 9640 102022
+        </footer>
+    </div>
+
+    <script>
+        const ROOMS = {
+            583459: { name: 'Royal Sea View Couple Room', bn: 'রয়্যাল সি ভিউ কাপল রুম', type: 'Couple', emoji: '🌊👑', adults: 2, children: 1 },
+            583466: { name: 'Premium Sea View Couple Room', bn: 'প্রিমিয়াম সি ভিউ কাপল রুম', type: 'Couple', emoji: '🌊⭐', adults: 2, children: 1 },
+            583467: { name: 'Deluxe Bay View Couple Room', bn: 'ডিলাক্স বে ভিউ কাপল রুম', type: 'Couple', emoji: '🏖️', adults: 2, children: 1 },
+            583468: { name: 'Deluxe Hill View Couple Room', bn: 'ডিলাক্স হিল ভিউ কাপল রুম', type: 'Couple', emoji: '🏔️', adults: 2, children: 1 },
+            583469: { name: 'Deluxe Urban View Couple Room', bn: 'ডিলাক্স আরবান ভিউ কাপল রুম', type: 'Couple', emoji: '🏙️', adults: 2, children: 1 },
+            583470: { name: 'Premium Sea View Family Room', bn: 'প্রিমিয়াম সি ভিউ ফ্যামিলি রুম', type: 'Family', emoji: '🌊👨‍👩‍👧‍👦', adults: 4, children: 2 },
+            583471: { name: 'Deluxe Hill View Family Room', bn: 'ডিলাক্স হিল ভিউ ফ্যামিলি রুম', type: 'Family', emoji: '🏔️👨‍👩‍👧‍👦', adults: 4, children: 2 },
+            583472: { name: 'Deluxe Urban View Family Room', bn: 'ডিলাক্স আরবান ভিউ ফ্যামিলি রুম', type: 'Family', emoji: '🏙️👨‍👩‍👧‍👦', adults: 4, children: 2 }
+        };
+        
+        const today = new Date();
+        const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+        const dayAfter = new Date(tomorrow); dayAfter.setDate(dayAfter.getDate() + 1);
+        
+        document.getElementById('checkIn').value = tomorrow.toISOString().split('T')[0];
+        document.getElementById('checkOut').value = dayAfter.toISOString().split('T')[0];
+        document.getElementById('checkIn').min = today.toISOString().split('T')[0];
+        
+        document.getElementById('checkIn').addEventListener('change', function() {
+            const checkIn = new Date(this.value);
+            const minCheckout = new Date(checkIn); minCheckout.setDate(minCheckout.getDate() + 1);
+            document.getElementById('checkOut').min = minCheckout.toISOString().split('T')[0];
+            if (new Date(document.getElementById('checkOut').value) <= checkIn) {
+                document.getElementById('checkOut').value = minCheckout.toISOString().split('T')[0];
+            }
+        });
+        
+        async function checkAvailability() {
+            const checkIn = document.getElementById('checkIn').value;
+            const checkOut = document.getElementById('checkOut').value;
+            const resultsDiv = document.getElementById('results');
+            const btn = document.getElementById('checkBtn');
+            
+            btn.disabled = true;
+            btn.textContent = '⏳ Checking...';
+            resultsDiv.innerHTML = '<div class="loading">Fetching real-time availability...</div>';
+            
+            try {
+                const response = await fetch(`/api/availability?startDate=${checkIn}&endDate=${checkOut}`);
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    displayResults(data.data, checkIn, checkOut);
+                } else {
+                    resultsDiv.innerHTML = `<div class="error">❌ ${data.error || 'Failed to fetch availability'}</div>`;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">❌ Connection error. Please try again.</div>`;
+            }
+            
+            btn.disabled = false;
+            btn.textContent = '🔍 Check Availability';
+        }
+        
+        function displayResults(rooms, checkIn, checkOut) {
+            let availableCount = 0, unavailableCount = 0;
+            
+            const roomCards = rooms.map(room => {
+                const roomInfo = ROOMS[room.roomId] || { name: room.name, bn: room.name, type: 'Room', emoji: '🏨', adults: 2, children: 1 };
+                const dates = Object.values(room.availability || {});
+                const isAvailable = dates.length > 0 && dates.every(d => d === true);
+                
+                if (isAvailable) availableCount++; else unavailableCount++;
+                
+                return `
+                    <div class="room-card ${isAvailable ? 'available' : 'unavailable'}">
+                        <div class="room-header">
+                            <span class="room-emoji">${roomInfo.emoji}</span>
+                            <span class="room-status ${isAvailable ? 'available' : 'unavailable'}">
+                                ${isAvailable ? '✓ Available' : '✗ Booked'}
+                            </span>
+                        </div>
+                        <div class="room-name">${roomInfo.name}</div>
+                        <div class="room-name-bn">${roomInfo.bn}</div>
+                        <span class="room-type">${roomInfo.type} Room</span>
+                        <div class="room-capacity">
+                            <span>👥 ${roomInfo.adults} Adults</span>
+                            <span>👶 ${roomInfo.children} Child</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('results').innerHTML = `
+                <div class="summary">
+                    <h3>📅 ${checkIn} to ${checkOut}</h3>
+                    <div class="summary-stats">
+                        <div class="stat"><div class="stat-number green">${availableCount}</div><div class="stat-label">Available</div></div>
+                        <div class="stat"><div class="stat-number red">${unavailableCount}</div><div class="stat-label">Booked</div></div>
+                    </div>
+                </div>
+                <div class="rooms-grid">${roomCards}</div>
+                ${availableCount > 0 ? `<div class="cta"><h3>📞 Ready to Book?</h3><a href="tel:+8809640102022">+880 9640 102022</a></div>` : ''}
+            `;
+        }
+    </script>
+</body>
+</html>
