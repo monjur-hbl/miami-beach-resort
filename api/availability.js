@@ -1,17 +1,25 @@
-export default async function handler(req, res) {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+export const config = {
+  runtime: 'edge',
+};
+
+export default async function handler(request) {
+  const { searchParams } = new URL(request.url);
+  const startDate = searchParams.get('startDate');
+  const endDate = searchParams.get('endDate');
+
+  // CORS headers
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Content-Type': 'application/json',
+  };
+
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { headers });
   }
 
-  const { startDate, endDate } = req.query;
-  
   if (!startDate || !endDate) {
-    return res.status(400).json({ success: false, error: 'Missing startDate or endDate' });
+    return new Response(JSON.stringify({ success: false, error: 'Missing startDate or endDate' }), { headers });
   }
 
   const BEDS24_TOKEN = 'PsJikzvTCNtknwTQt4eFFueJKMA/71vezOPM0kSmxl7ZgGwUMEAwDF0RIryBdmSSWb41A7tM4DkVaYxFv2bAAaAvZzrpI9siKJvH9YV0WNf8PwbY+0tRfg6xF11UszG8e/23Hd5m80kJQxLNgCdMUFI/WN3lTLR6FVzk/3srSf4=';
@@ -20,14 +28,11 @@ export default async function handler(req, res) {
   try {
     const response = await fetch(
       `https://beds24.com/api/v2/inventory/rooms/availability?propertyId=${PROPERTY_ID}&startDate=${startDate}&endDate=${endDate}`,
-      {
-        headers: { 'token': BEDS24_TOKEN }
-      }
+      { headers: { 'token': BEDS24_TOKEN } }
     );
-
     const data = await response.json();
-    return res.status(200).json(data);
+    return new Response(JSON.stringify(data), { headers });
   } catch (error) {
-    return res.status(500).json({ success: false, error: error.message });
+    return new Response(JSON.stringify({ success: false, error: error.message }), { headers });
   }
 }
